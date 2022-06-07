@@ -1,0 +1,118 @@
+Assignment Number 4-Demo Voting App
+My Obersvations For the Demo Voting App
+
+---------------------------------------Cloning App-----------------------------------------
+[root@ip-172-31-19-68 ~]#  git clone https://github.com/ashishrpandey/example-voting-app
+Cloning into 'example-voting-app'...
+remote: Enumerating objects: 494, done.
+remote: Total 494 (delta 0), reused 0 (delta 0), pack-reused 494
+Receiving objects: 100% (494/494), 236.17 KiB | 1.04 MiB/s, done.
+Resolving deltas: 100% (179/179), done.
+[root@ip-172-31-19-68 ~]# ls
+example-voting-app  firstchart  firstChart  istio-1.5.2  istio-1.5.2-linux.tar.gz  kubernetes-training  nopod-iptable.txt  python_rest_flask
+[root@ip-172-31-19-68 ~]# cd example-voting-app/
+[root@ip-172-31-19-68 example-voting-app]# ls
+=>Entered into the k8s-specs folder
+
+
+---------------Running All The Pods-----------------------
+=>kubectl apply -f .==> will run all YAML in the current directory
+[root@ip-172-31-19-68 k8s-specifications]# kubectl apply -f .
+deployment.apps/db created
+service/db created
+deployment.apps/redis created
+service/redis created
+deployment.apps/result created
+service/result created
+deployment.apps/vote created
+service/vote created
+deployment.apps/worker created
+-------------------------------------------------------------
+[root@ip-172-31-19-68 k8s-specifications]# kubectl get svc
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+db           ClusterIP   10.102.12.232   <none>        5432/TCP         80s
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP          4m56s
+redis        ClusterIP   10.110.73.107   <none>        6379/TCP         80s
+result       NodePort    10.111.53.118   <none>        5001:31001/TCP   80s
+vote         NodePort    10.96.252.180   <none>        5000:31000/TCP   80s
+=>Checking the Services running
+=>I was already in the default namespace
+=>Result and voting type is NodePort and kubectl get svc gave us all the info that on which port it is running.
+--------------------------------------------------------------------------------------------------------------------
+
+=>Took My public IP and with port number,I accessed the result and voting app
+54.251.163.194:31001-result
+54.251.163.194:31000-vote
+
+------------------------------------------------------------------------------------------------------------------
+
+Observations After Deleting The Pods:-
+1.After deleting Voting Pod
+[root@ip-172-31-19-68 k8s-specifications]# kubectl delete pod vote-94849dc97-vflpr
+pod "vote-94849dc97-vflpr" deleted
+[root@ip-172-31-19-68 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS    RESTARTS   AGE
+db-b54cd94f4-bm9pm        2/2     Running   0          21m
+redis-868d64d78-8zqhd     2/2     Running   0          21m
+result-5d57b59f4b-9kskz   2/2     Running   0          21m
+vote-94849dc97-d4t8w      2/2     Running   0          3m36s
+worker-dd46d7584-ph66m    2/2     Running   0          21m
+=>After deleting voting pod,It got restarted again,so even if we delete our pod it ll not stop the service
+--------------------------------------------------------------------------------------------------------------
+2.After deleting worker Pod
+=>Same observation as Voting pod,it got restarted again
+[root@ip-172-31-19-68 k8s-specifications]# kubectl delete pod worker-dd46d7584-ph66m
+pod "worker-dd46d7584-ph66m" deleted
+^C
+[root@ip-172-31-19-68 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS    RESTARTS   AGE
+db-b54cd94f4-bm9pm        2/2     Running   0          25m
+redis-868d64d78-8zqhd     2/2     Running   0          25m
+result-5d57b59f4b-9kskz   2/2     Running   0          25m
+vote-94849dc97-d4t8w      2/2     Running   0          7m17s
+worker-dd46d7584-d2287    2/2     Running   0          2m
+
+-------------------------------------------------------------------------------------------------------------
+3.After deleting DB pod
+=>Services halted,It got restarted again
+=>To restart the service,we deleted result pod,then it got initialized again,and services restored.
+[root@ip-172-31-19-68 k8s-specifications]# kubectl delete pod result-5d57b59f4b-9kskz
+pod "result-5d57b59f4b-9kskz" deleted
+^C
+[root@ip-172-31-19-68 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS        RESTARTS   AGE
+db-b54cd94f4-9rn29        2/2     Running       0          19m
+redis-868d64d78-8zqhd     2/2     Running       0          52m
+result-5d57b59f4b-9kskz   2/2     Terminating   0          52m
+result-5d57b59f4b-p4cw9   0/2     Pending       0          7s
+vote-94849dc97-mnk5g      2/2     Running       0          18m
+worker-dd46d7584-6brfr    2/2     Running       1          22m
+[root@ip-172-31-19-68 k8s-specifications]# kubectl get svc
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+db           ClusterIP   10.102.12.232   <none>        5432/TCP         53m
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP          57m
+redis        ClusterIP   10.110.73.107   <none>        6379/TCP         53m
+result       NodePort    10.111.53.118   <none>        5001:31001/TCP   53m
+vote         NodePort    10.96.252.180   <none>        5000:31000/TCP   53m
+[root@ip-172-31-19-68 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS     RESTARTS   AGE
+db-b54cd94f4-9rn29        2/2     Running    0          22m
+redis-868d64d78-8zqhd     2/2     Running    0          55m
+result-5d57b59f4b-p4cw9   0/2     Init:0/1   0          2m54s
+vote-94849dc97-mnk5g      2/2     Running    0          21m
+worker-dd46d7584-6brfr    2/2     Running    1          25m
+[root@ip-172-31-19-68 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS            RESTARTS   AGE
+db-b54cd94f4-9rn29        2/2     Running           0          22m
+redis-868d64d78-8zqhd     2/2     Running           0          55m
+result-5d57b59f4b-p4cw9   0/2     PodInitializing   0          3m25s==>Initializing
+vote-94849dc97-mnk5g      2/2     Running           0          21m
+worker-dd46d7584-6brfr    2/2     Running           1          25m
+[root@ip-172-31-19-68 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS    RESTARTS   AGE
+db-b54cd94f4-9rn29        2/2     Running   0          23m
+redis-868d64d78-8zqhd     2/2     Running   0          55m
+result-5d57b59f4b-p4cw9   2/2     Running   0          3m37s==>Running
+vote-94849dc97-mnk5g      2/2     Running   0          22m
+worker-dd46d7584-6brfr    2/2     Running   1          25m
+-----------------------------------------------------------------------------
